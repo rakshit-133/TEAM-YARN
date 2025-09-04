@@ -1,44 +1,56 @@
 #!/usr/bin/env python3
 """
-summarizer_input.py
+summarizer_bullets.py
 ---------------------------------
-A simple live code summarizer.
-User enters/pastes code, then gets a short summary.
+Takes user input (Python code) and prints a bullet-point summary
+of what the code does in plain English.
 """
 
 import re
 
 def summarize_code(code: str) -> str:
-    """Generate a very basic summary of the given code."""
-    summary_lines = []
+    summary = []
 
-    # Detect package info (PKGBUILD style)
-    pkgname = re.search(r'pkgname\s*=\s*([^\n]+)', code)
-    pkgver = re.search(r'pkgver\s*=\s*([^\n]+)', code)
-    if pkgname:
-        summary_lines.append(f"Package Name: {pkgname.group(1).strip()}")
-    if pkgver:
-        summary_lines.append(f"Version: {pkgver.group(1).strip()}")
+    # Detect imports
+    imports = re.findall(r'^\s*import (\w+)', code, re.M)
+    from_imports = re.findall(r'^\s*from (\w+) import (\w+)', code, re.M)
+    if imports or from_imports:
+        summary.append("Imports:")
+        for imp in imports:
+            summary.append(f"  - Imports the module '{imp}'")
+        for frm, imp in from_imports:
+            summary.append(f"  - From '{frm}' imports '{imp}'")
 
-    # Detect dependencies (quoted tokens)
-    deps = re.findall(r"['\"]([A-Za-z0-9\-\._]+)['\"]", code)
-    if deps:
-        summary_lines.append(f"Dependencies: {', '.join(sorted(set(deps)))}")
-
-    # Detect shell-style functions: name() { ... }
-    funcs = re.findall(r'^\s*([A-Za-z0-9_]+)\s*\(\)\s*\{', code, re.M)
+    # Detect functions
+    funcs = re.findall(r'^\s*def (\w+)\s*\(', code, re.M)
     if funcs:
-        summary_lines.append(f"Functions: {', '.join(funcs)}")
+        summary.append("Functions:")
+        for fn in funcs:
+            summary.append(f"  - Defines a function '{fn}'")
 
-    if not summary_lines:
-        summary_lines.append("No special metadata found. Looks like plain code.")
+    # Detect classes
+    classes = re.findall(r'^\s*class (\w+)', code, re.M)
+    if classes:
+        summary.append("Classes:")
+        for cls in classes:
+            summary.append(f"  - Defines a class '{cls}'")
 
-    return "\n".join(summary_lines)
+    # Detect assignments
+    assigns = re.findall(r'(\w+)\s*=', code)
+    if assigns:
+        summary.append("Variables:")
+        for var in set(assigns):
+            summary.append(f"  - Assigns a value to variable '{var}'")
+
+    if not summary:
+        summary.append("No recognizable structures found. Code looks simple.")
+
+    return "\n".join(summary)
 
 
 if __name__ == "__main__":
-    print("=== Live Code Summarizer ===")
-    print("Paste your code below.")
+    print("=== Bullet Point Code Summarizer ===")
+    print("Paste your Python code below.")
     print("(Finish input with Ctrl+D on Mac/Linux or Ctrl+Z then Enter on Windows)\n")
 
     # Collect multiline input
