@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """
-summarizer_bullets.py
+summarizer_with_flowchart.py
 ---------------------------------
-Takes user input (Python code) and prints a bullet-point summary
-of what the code does in plain English.
+Summarizes Python code in bullet points
+AND generates a flowchart of its structure.
 """
 
 import re
+from graphviz import Digraph
 
-def summarize_code(code: str) -> str:
+def summarize_code(code: str):
     summary = []
+    structure = {"imports": [], "functions": [], "classes": [], "variables": []}
 
     # Detect imports
     imports = re.findall(r'^\s*import (\w+)', code, re.M)
@@ -18,8 +20,10 @@ def summarize_code(code: str) -> str:
         summary.append("Imports:")
         for imp in imports:
             summary.append(f"  - Imports the module '{imp}'")
+            structure["imports"].append(imp)
         for frm, imp in from_imports:
             summary.append(f"  - From '{frm}' imports '{imp}'")
+            structure["imports"].append(f"{frm}.{imp}")
 
     # Detect functions
     funcs = re.findall(r'^\s*def (\w+)\s*\(', code, re.M)
@@ -27,6 +31,7 @@ def summarize_code(code: str) -> str:
         summary.append("Functions:")
         for fn in funcs:
             summary.append(f"  - Defines a function '{fn}'")
+            structure["functions"].append(fn)
 
     # Detect classes
     classes = re.findall(r'^\s*class (\w+)', code, re.M)
@@ -34,6 +39,7 @@ def summarize_code(code: str) -> str:
         summary.append("Classes:")
         for cls in classes:
             summary.append(f"  - Defines a class '{cls}'")
+            structure["classes"].append(cls)
 
     # Detect assignments
     assigns = re.findall(r'(\w+)\s*=', code)
@@ -41,15 +47,40 @@ def summarize_code(code: str) -> str:
         summary.append("Variables:")
         for var in set(assigns):
             summary.append(f"  - Assigns a value to variable '{var}'")
+            structure["variables"].append(var)
 
     if not summary:
         summary.append("No recognizable structures found. Code looks simple.")
 
-    return "\n".join(summary)
+    return "\n".join(summary), structure
+
+
+def create_flowchart(structure: dict, output_file="flowchart"):
+    dot = Digraph(comment="Code Flowchart", format="png")
+
+    dot.node("CODE", "Code Overview", shape="box", style="filled", color="lightblue")
+
+    for imp in structure["imports"]:
+        dot.node(imp, f"Import: {imp}", shape="ellipse", color="green")
+        dot.edge("CODE", imp)
+
+    for fn in structure["functions"]:
+        dot.node(fn, f"Function: {fn}", shape="rectangle", color="orange")
+        dot.edge("CODE", fn)
+
+    for cls in structure["classes"]:
+        dot.node(cls, f"Class: {cls}", shape="folder", color="purple")
+        dot.edge("CODE", cls)
+
+    for var in structure["variables"]:
+        dot.node(var, f"Variable: {var}", shape="note", color="red")
+        dot.edge("CODE", var)
+
+    dot.render(output_file, view=True)  # saves as flowchart.png
 
 
 if __name__ == "__main__":
-    print("=== Bullet Point Code Summarizer ===")
+    print("=== Code Summarizer + Flowchart Generator ===")
     print("Paste your Python code below.")
     print("(Finish input with Ctrl+D on Mac/Linux or Ctrl+Z then Enter on Windows)\n")
 
@@ -65,6 +96,10 @@ if __name__ == "__main__":
     code_text = "\n".join(user_code_lines).strip()
     print("\n--- SUMMARY ---")
     if code_text:
-        print(summarize_code(code_text))
+        summary, structure = summarize_code(code_text)
+        print(summary)
+        print("\n--- FLOWCHART ---")
+        create_flowchart(structure, "flowchart")
+        print("Flowchart saved as flowchart.png")
     else:
         print("No code entered.")
